@@ -8,7 +8,7 @@ const app = express();
 const port = 3000;
 
 app.use(express.json());
-
+//------------------------------ALUMNO 3 -----------------------------
 // LOGIN
 app.post('/login', async (req, res) => {
     const { correo, clave } = req.body;
