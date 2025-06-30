@@ -6,6 +6,10 @@ import { Pedido } from './models/Pedido.js';
 import { Producto } from './models/Producto.js';
 import { Categoria } from './models/Categoria.js';
 import { Oferta } from './models/Oferta.js';
+import { Pago } from './models/Pago.js';
+import { Envio } from './models/Envio.js';
+import { Estado_Pedido } from './models/Estado_Pedido.js';
+import { Pedido_Producto } from './models/Pedido_producto.js';
 
 const app = express();
 const port = 3000;
@@ -103,6 +107,85 @@ app.get('/ofertas/:id', async (req, res) => {
     res.json(oferta);
 });
 
+// ------------------------------ ALUMNO 2 -----------------------------
+
+// 5. CARRITO DE COMPRAS
+app.get('/carrito/:clienteId', async (req, res) => {
+    const productos = await Producto.findAll({ limit: 3 });
+    const items = productos.map((p, i) => ({ id: i + 1, productoId: p.id, nombre: p.nombre, precio: p.precio, cantidad: 2, subtotal: p.precio * 2 }));
+    res.json({ items, total: items.reduce((sum, item) => sum + item.subtotal, 0) });
+});
+
+app.post('/carrito', async (req, res) => {
+    const producto = await Producto.findByPk(req.body.productoId);
+    if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
+    res.status(201).json({ mensaje: 'Producto agregado al carrito', producto });
+});
+
+app.put('/carrito/:clienteId/:itemId', async (req, res) => {
+    const { cantidad } = req.body;
+    if (!cantidad || cantidad < 1) return res.status(400).json({ error: 'Cantidad inválida' });
+    res.json({ mensaje: 'Cantidad actualizada', cantidad });
+});
+
+app.delete('/carrito/:clienteId/:itemId', async (req, res) => {
+    const { itemId } = req.params;
+    if (!itemId) return res.status(404).json({ error: 'Item no encontrado' });
+    res.json({ mensaje: 'Item eliminado del carrito' });
+});
+
+// ITEMS GUARDADOS
+app.get('/guardados/:clienteId', async (req, res) => {
+    const productos = await Producto.findAll({ limit: 2 });
+    const items = productos.map((p, i) => ({ id: i + 1, productoId: p.id, nombre: p.nombre, precio: p.precio, cantidad: 1 }));
+    res.json(items);
+});
+
+app.delete('/guardados/:clienteId/:itemId', async (req, res) => {
+    const { itemId } = req.params;
+    if (!itemId) return res.status(404).json({ error: 'Item no encontrado' });
+    res.json({ mensaje: 'Item eliminado de guardados' });
+});
+
+// 6. CHECKOUT
+app.get('/checkout/:clienteId', async (req, res) => {
+    const productos = await Producto.findAll({ limit: 2 });
+    const items = productos.map((p, i) => ({ id: i + 1, productoId: p.id, nombre: p.nombre, precio: p.precio, cantidad: 1, subtotal: p.precio }));
+    const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
+    res.json({ items, subtotal, envio: 5.00, total: subtotal + 5.00 });
+});
+
+app.post('/checkout/completarorden', async (req, res) => {
+    const pago = await Pago.create({ metodo: req.body.metodoPago, datos: JSON.stringify(req.body.datosPago), monto: 25.00 });
+    const envio = await Envio.create({ metodo: req.body.metodoEnvio, direccion: req.body.direccion });
+    const pedido = await Pedido.create({
+        numero: `PED${Date.now()}`, 
+        fecha_pedido: new Date(), 
+        precio_total: 25.00,
+        direccion: req.body.direccion, 
+        correo: req.body.correo, 
+        clienteId: req.body.clienteId, 
+        estadoPedidoId: 1, 
+        pagoId: pago.id, 
+        envioId: envio.id
+    });
+    res.status(201).json({ mensaje: 'Orden completada', pedido: { id: pedido.id, numero: pedido.numero } });
+});
+
+app.get('/generarqr/:pedidoId', async (req, res) => {
+    const pedido = await Pedido.findByPk(req.params.pedidoId);
+    if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado' });
+    res.json({ qrCode: `data:image/png;base64,${Buffer.from(JSON.stringify({ pedidoId: pedido.id, numero: pedido.numero })).toString('base64')}` });
+});
+
+// 7. PEDIDO COMPLETADO
+app.get('/pedidocompletado/:pedidoId', async (req, res) => {
+    const pedido = await Pedido.findByPk(req.params.pedidoId, {
+        include: [{ model: Pedido_Producto, include: [Producto] }, { model: Cliente, include: [Usuario] }, { model: Pago }, { model: Envio }, { model: Estado_Pedido }]
+    });
+    if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado' });
+    res.json(pedido);
+});
 
 
 //------------------------------ALUMNO 3 -----------------------------
@@ -158,26 +241,6 @@ app.put('/pedidos/:id/cancelar', async (req, res) => {
 
 
 // ------------------------------ ALUMNO 5 -----------------------------
-
-// Dashboard del admin: Detalle del usuario y sus órdenes (máx 10)
-app.get("/admin/usuario/:id", async (req, res) => {
-    try {
-        const id = req.params.id;
-        const usuario = await Usuario.findByPk(id);
-        if (!usuario) return res.status(404).send("Usuario no encontrado");
-        
-        const pedidos = await Pedido.findAll({
-            where: { clienteId: id },
-            limit: 10,
-            order: [['fecha_pedido', 'DESC']]
-        });
-        
-        res.json({ usuario, ordenes: pedidos });
-    } catch (error) {
-        res.status(500).send("Error del servidor");
-    }
-});
-
 // Lista de productos (mantenimiento, paginación, filtro, activar/desactivar)
 app.get("/admin/productos", async (req, res) => {
     try {
