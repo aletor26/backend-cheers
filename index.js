@@ -156,6 +156,93 @@ app.put('/pedidos/:id/cancelar', async (req, res) => {
     res.json({ mensaje: 'Pedido cancelado', pedido });
 });
 
+// ------------------------------ ALUMNO 6 -----------------------------
+
+
+// Listar usuarios (con filtros y paginación)
+app.get('/admin/usuarios', async (req, res) => {
+    const { id, nombre, apellido, page = 1, limit = 10 } = req.query;
+    const where = {};
+    if (id) where.id = id;
+    if (nombre) where.nombre = { [Op.like]: `%${nombre}%` };
+    if (apellido) where.apellido = { [Op.like]: `%${apellido}%` };
+    const usuarios = await Usuario.findAndCountAll({
+        where,
+        offset: (page - 1) * limit,
+        limit: parseInt(limit)
+    });
+    res.json(usuarios);
+});
+
+// Desactivar usuario
+app.put('/admin/usuarios/:id/desactivar', async (req, res) => {
+    const usuario = await Usuario.findByPk(req.params.id);
+    if (!usuario) return res.status(404).json({ error: 'No encontrado' });
+    usuario.activo = false;
+    await usuario.save();
+    res.json({ mensaje: 'Usuario desactivado', usuario });
+});
+
+// Detalle de usuario y sus órdenes
+app.get('/admin/usuarios/:id', async (req, res) => {
+    const usuario = await Usuario.findByPk(req.params.id);
+    if (!usuario) return res.status(404).json({ error: 'No encontrado' });
+    const pedidos = await Pedido.findAll({
+        where: { clienteId: usuario.id },
+        limit: 10,
+        order: [['fecha_pedido', 'DESC']]
+    });
+    res.json({ usuario, pedidos });
+});
+
+// Listar órdenes (con filtros y paginación)
+app.get('/admin/pedidos', async (req, res) => {
+    const { numero, nombre, apellido, page = 1, limit = 10 } = req.query;
+    const where = {};
+    if (numero) where.numero = { [Op.like]: `%${numero}%` };
+    // Para filtrar por nombre/apellido del cliente:
+    let include = [];
+    if (nombre || apellido) {
+        include.push({
+            model: Cliente,
+            include: [{ model: Usuario, where: {
+                ...(nombre && { nombre: { [Op.like]: `%${nombre}%` } }),
+                ...(apellido && { apellido: { [Op.like]: `%${apellido}%` } })
+            }}]
+        });
+    }
+    const pedidos = await Pedido.findAndCountAll({
+        where,
+        include,
+        offset: (page - 1) * limit,
+        limit: parseInt(limit),
+        order: [['fecha_pedido', 'DESC']]
+    });
+    res.json(pedidos);
+});
+
+// Detalle de orden (admin)
+app.get('/admin/pedidos/:id', async (req, res) => {
+    const pedido = await Pedido.findByPk(req.params.id, {
+        include: [
+            { model: Pedido_Producto, include: [Producto] },
+            { model: Cliente, include: [Usuario] }
+        ]
+    });
+    if (!pedido) return res.status(404).json({ error: 'No encontrado' });
+    res.json(pedido);
+});
+
+// Cancelar orden (admin)
+app.put('/admin/pedidos/:id/cancelar', async (req, res) => {
+    const pedido = await Pedido.findByPk(req.params.id);
+    if (!pedido) return res.status(404).json({ error: 'No encontrado' });
+    pedido.estadoPedidoId = 2; // Suponiendo que 2 es "Cancelado"
+    await pedido.save();
+    res.json({ mensaje: 'Pedido cancelado', pedido });
+});
+
+
 async function startServer() {
     try {
         await sequelize.authenticate();
