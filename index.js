@@ -156,16 +156,133 @@ app.put('/pedidos/:id/cancelar', async (req, res) => {
     res.json({ mensaje: 'Pedido cancelado', pedido });
 });
 
-// ------------------------------ ALUMNO 6 -----------------------------
 
+// ------------------------------ ALUMNO 5 -----------------------------
+
+// Dashboard del admin: Detalle del usuario y sus órdenes (máx 10)
+app.get("/admin/usuario/:id", async (req, res) => {
+    try {
+        const id = req.params.id;
+        const usuario = await Usuario.findByPk(id);
+        if (!usuario) return res.status(404).send("Usuario no encontrado");
+        
+        const pedidos = await Pedido.findAll({
+            where: { clienteId: id },
+            limit: 10,
+            order: [['fecha_pedido', 'DESC']]
+        });
+        
+        res.json({ usuario, ordenes: pedidos });
+    } catch (error) {
+        res.status(500).send("Error del servidor");
+    }
+});
+
+// Lista de productos (mantenimiento, paginación, filtro, activar/desactivar)
+app.get("/admin/productos", async (req, res) => {
+    try {
+        const { nombre, id, soloActivos } = req.query;
+        const where = {};
+        
+        if (nombre) where.nombre = { [sequelize.Op.like]: `%${nombre}%` };
+        if (id) where.id = id;
+        if (soloActivos === "true") where.estadoId = 1; // Asumiendo que estadoId 1 = activo
+        
+        const productos = await Producto.findAll({ where });
+        res.json({ productos, total: productos.length });
+    } catch (error) {
+        res.status(500).send("Error del servidor");
+    }
+});
+
+app.put("/admin/producto/:id/activar", async (req, res) => {
+    try {
+        const id = req.params.id;
+        const producto = await Producto.findByPk(id);
+        if (producto) {
+            producto.estadoId = 1; // Activo
+            await producto.save();
+            res.json(producto);
+        } else {
+            res.status(404).send("Producto no encontrado");
+        }
+    } catch (error) {
+        res.status(500).send("Error del servidor");
+    }
+});
+
+app.put("/admin/producto/:id/desactivar", async (req, res) => {
+    try {
+        const id = req.params.id;
+        const producto = await Producto.findByPk(id);
+        if (producto) {
+            producto.estadoId = 2;
+            await producto.save();
+            res.json(producto);
+        } else {
+            res.status(404).send("Producto no encontrado");
+        }
+    } catch (error) {
+        res.status(500).send("Error del servidor");
+    }
+});
+
+// Agregar producto
+app.post("/admin/producto", async (req, res) => {
+    try {
+        const data = req.body;
+        if (data.nombre && data.descripcion && data.precio && data.categoriaId && data.estadoId) {
+            const nuevo = await Producto.create(data);
+            res.status(201).json(nuevo);
+        } else {
+            res.status(400).send("Faltan datos para la creacion");
+        }
+    } catch (error) {
+        res.status(500).send("Error del servidor");
+    }
+});
+
+// Detalle de producto (ver, modificar)
+app.get("/admin/producto/:id", async (req, res) => {
+    try {
+        const id = req.params.id;
+        const producto = await Producto.findByPk(id);
+        if (producto) {
+            res.json(producto);
+        } else {
+            res.status(404).send("Producto no encontrado");
+        }
+    } catch (error) {
+        res.status(500).send("Error del servidor");
+    }
+});
+
+app.put("/admin/producto/:id", async (req, res) => {
+    try {
+        const id = req.params.id;
+        const data = req.body;
+        const producto = await Producto.findByPk(id);
+        if (producto) {
+            await producto.update(data);
+            res.json(producto);
+        } else {
+            res.status(404).send("Producto no encontrado");
+        }
+    } catch (error) {
+        res.status(500).send("Error del servidor");
+    }
+});
+
+
+// ------------------------------ ALUMNO 6 -----------------------------
 
 // Listar usuarios (con filtros y paginación)
 app.get('/admin/usuarios', async (req, res) => {
     const { id, nombre, apellido, page = 1, limit = 10 } = req.query;
     const where = {};
     if (id) where.id = id;
-    if (nombre) where.nombre = { [Op.like]: `%${nombre}%` };
-    if (apellido) where.apellido = { [Op.like]: `%${apellido}%` };
+    if (nombre) where.nombre = { [sequelize.Op.like]: `%${nombre}%` };
+    if (apellido) where.apellido = { [sequelize.Op.like]: `%${apellido}%` };
     const usuarios = await Usuario.findAndCountAll({
         where,
         offset: (page - 1) * limit,
@@ -199,15 +316,15 @@ app.get('/admin/usuarios/:id', async (req, res) => {
 app.get('/admin/pedidos', async (req, res) => {
     const { numero, nombre, apellido, page = 1, limit = 10 } = req.query;
     const where = {};
-    if (numero) where.numero = { [Op.like]: `%${numero}%` };
+    if (numero) where.numero = { [sequelize.Op.like]: `%${numero}%` };
     // Para filtrar por nombre/apellido del cliente:
     let include = [];
     if (nombre || apellido) {
         include.push({
             model: Cliente,
             include: [{ model: Usuario, where: {
-                ...(nombre && { nombre: { [Op.like]: `%${nombre}%` } }),
-                ...(apellido && { apellido: { [Op.like]: `%${apellido}%` } })
+                ...(nombre && { nombre: { [sequelize.Op.like]: `%${nombre}%` } }),
+                ...(apellido && { apellido: { [sequelize.Op.like]: `%${apellido}%` } })
             }}]
         });
     }
