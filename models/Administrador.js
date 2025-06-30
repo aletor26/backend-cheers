@@ -1,13 +1,17 @@
 import {sequelize} from '../config/db.js';
 import {DataTypes} from 'sequelize';
+import {Usuario} from './Usuario.js';
 
-export const Categorias = sequelize.define('Categorias', {
+export const Administrador = sequelize.define('Administrador', {
     id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
-        autoIncrement: true
+        references: {
+            model: Usuario,
+            key: 'id'
+        }
     },
-    nombre: {
+    permisos: {
         type: DataTypes.STRING,
         allowNull: false,
     }
