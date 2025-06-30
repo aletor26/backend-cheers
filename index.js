@@ -3,11 +3,108 @@ import { sequelize } from './config/db.js';
 import { Usuario } from './models/Usuario.js';
 import { Cliente } from './models/Cliente.js';
 import { Pedido } from './models/Pedido.js';
+import { Producto } from './models/Producto.js';
+import { Categoria } from './models/Categoria.js';
+import { Oferta } from './models/Oferta.js';
 
 const app = express();
 const port = 3000;
-
 app.use(express.json());
+
+// ------------------------------ ALUMNO 1 -----------------------------
+
+// PRODUCTOS
+app.get('/productos', async (req, res) => {
+    const productos = await Producto.findAll();
+    res.json(productos);
+});
+
+app.get('/productos/:id', async (req, res) => {
+    const producto = await Producto.findByPk(req.params.id);
+    if (!producto) return res.status(404).json({ error: 'No encontrado' });
+    res.json(producto);
+});
+
+app.post('/productos', async (req, res) => {
+    try {
+        const producto = await Producto.create(req.body);
+        res.status(201).json(producto);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+app.put('/productos/:id', async (req, res) => {
+    const producto = await Producto.findByPk(req.params.id);
+    if (!producto) return res.status(404).json({ error: 'No encontrado' });
+    try {
+        await producto.update(req.body);
+        res.json(producto);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+app.delete('/productos/:id', async (req, res) => {
+    const producto = await Producto.findByPk(req.params.id);
+    if (!producto) return res.status(404).json({ error: 'No encontrado' });
+    await producto.destroy();
+    res.json({ mensaje: 'Producto eliminado' });
+});
+
+// CATEGORIAS
+app.get('/categorias', async (req, res) => {
+    const categorias = await Categoria.findAll();
+    res.json(categorias);
+});
+
+app.get('/categorias/:id', async (req, res) => {
+    const categoria = await Categoria.findByPk(req.params.id);
+    if (!categoria) return res.status(404).json({ error: 'No encontrado' });
+    res.json(categoria);
+});
+
+app.post('/categorias', async (req, res) => {
+    try {
+        const categoria = await Categoria.create(req.body);
+        res.status(201).json(categoria);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+app.put('/categorias/:id', async (req, res) => {
+    const categoria = await Categoria.findByPk(req.params.id);
+    if (!categoria) return res.status(404).json({ error: 'No encontrado' });
+    try {
+        await categoria.update(req.body);
+        res.json(categoria);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+app.delete('/categorias/:id', async (req, res) => {
+    const categoria = await Categoria.findByPk(req.params.id);
+    if (!categoria) return res.status(404).json({ error: 'No encontrado' });
+    await categoria.destroy();
+    res.json({ mensaje: 'Categoría eliminada' });
+});
+
+// OFERTAS
+app.get('/ofertas', async (req, res) => {
+    const ofertas = await Oferta.findAll();
+    res.json(ofertas);
+});
+
+app.get('/ofertas/:id', async (req, res) => {
+    const oferta = await Oferta.findByPk(req.params.id);
+    if (!oferta) return res.status(404).json({ error: 'No encontrado' });
+    res.json(oferta);
+});
+
+
+
 //------------------------------ALUMNO 3 -----------------------------
 // LOGIN
 app.post('/login', async (req, res) => {
