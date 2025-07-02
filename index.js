@@ -238,7 +238,119 @@ app.put('/pedidos/:id/cancelar', async (req, res) => {
     await pedido.save();
     res.json({ mensaje: 'Pedido cancelado', pedido });
 });
+// ------------------------------ ALUMNO 4 -----------------------------
+// Obtener lista de categorías
+app.get('/categorias', async (req, res) => {
+  try {
+    const categorias = await Categoria.findAll();
+    res.json(categorias);
+  } catch (err) {
+    res.status(500).json({ error: 'Error al obtener categorías' });
+  }
+});
 
+// Agregar nueva categoría
+app.post('/categorias', async (req, res) => {
+  const { name, description, image } = req.body;
+  if (!name || typeof name !== 'string' || name.trim() === '') {
+    return res.status(400).json({ error: 'Nombre de categoría requerido' });
+  }
+  try {
+    const existe = await Categoria.findOne({ where: { name } });
+    if (existe) {
+      return res.status(409).json({ error: 'La categoría ya existe' });
+    }
+    const nuevaCategoria = await Categoria.create({ name, description, image, active: true });
+    res.status(201).json(nuevaCategoria);
+  } catch (err) {
+    res.status(500).json({ error: 'Error al crear categoría' });
+  }
+});
+
+// Listar todas las órdenes de un usuario por id
+app.get('/usuarios/:id/ordenes', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const usuario = await Usuario.findByPk(id);
+    if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
+    const ordenes = await Orden.findAll({ where: { userId: id } });
+    res.json(ordenes);
+  } catch (err) {
+    res.status(500).json({ error: 'Error al obtener órdenes' });
+  }
+});
+
+// Obtener detalle de una orden de un usuario por id
+app.get('/usuarios/:id/ordenes/:ordenId', async (req, res) => {
+  const { id, ordenId } = req.params;
+  try {
+    const orden = await Orden.findOne({ where: { id: ordenId, userId: id } });
+    if (!orden) return res.status(404).json({ error: 'Orden no encontrada' });
+    res.json(orden);
+  } catch (err) {
+    res.status(500).json({ error: 'Error al obtener la orden' });
+  }
+});
+
+// Obtener datos del usuario por id
+app.get('/usuarios/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const usuario = await Usuario.findByPk(id, {
+      attributes: ['id', 'nombre', 'apellido', 'email', 'dni', 'role', 'activo', 'createdAt']
+    });
+    if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
+    res.json(usuario);
+  } catch (err) {
+    res.status(500).json({ error: 'Error al obtener usuario' });
+  }
+});
+
+// Editar datos del usuario por id
+app.put('/usuarios/:id', async (req, res) => {
+  const { id } = req.params;
+  const { nombre, apellido, email, dni } = req.body;
+
+  try {
+    const usuario = await Usuario.findByPk(id);
+    if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    usuario.nombre = nombre ?? usuario.nombre;
+    usuario.apellido = apellido ?? usuario.apellido;
+    usuario.email = email ?? usuario.email;
+    usuario.dni = dni ?? usuario.dni;
+
+    await usuario.save();
+    res.json({ mensaje: 'Datos actualizados correctamente', usuario });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al actualizar usuario' });
+  }
+});
+
+// Cambiar contraseña de un usuario por id
+app.post('/usuarios/:id/cambiar-password', async (req, res) => {
+  const { id } = req.params;
+  const { actual, nueva } = req.body;
+  if (!actual || !nueva) {
+    return res.status(400).json({ error: 'Debes enviar la contraseña actual y la nueva' });
+  }
+  if (nueva.length < 6) {
+    return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres' });
+  }
+  try {
+    const usuario = await Usuario.findByPk(id);
+    if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
+    const esValida = await usuario.validarPassword(actual);
+    if (!esValida) {
+      return res.status(400).json({ error: 'Contraseña actual incorrecta' });
+    }
+    usuario.password = nueva;
+    await usuario.save();
+    res.json({ mensaje: 'Contraseña actualizada correctamente' });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al cambiar la contraseña' });
+  }
+});
 
 // ------------------------------ ALUMNO 5 -----------------------------
 // Lista de productos (mantenimiento, paginación, filtro, activar/desactivar)
