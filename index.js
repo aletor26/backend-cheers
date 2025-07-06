@@ -574,6 +574,15 @@ app.put('/admin/usuarios/:id/desactivar', async (req, res) => {
     res.json({ mensaje: 'Usuario desactivado', usuario });
 });
 
+// Activar usuario
+app.put('/admin/usuarios/:id/activar', async (req, res) => {
+    const usuario = await Usuario.findByPk(req.params.id);
+    if (!usuario) return res.status(404).json({ error: 'No encontrado' });
+    usuario.activo = true;
+    await usuario.save();
+    res.json({ mensaje: 'Usuario activado', usuario });
+});
+
 // Detalle de usuario y sus órdenes
 app.get('/admin/usuarios/:id', async (req, res) => {
     const usuario = await Usuario.findByPk(req.params.id);
