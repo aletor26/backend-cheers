@@ -111,9 +111,24 @@ app.get('/ofertas/:id', async (req, res) => {
 
 // 5. CARRITO DE COMPRAS
 app.get('/carrito/:clienteId', async (req, res) => {
-    const productos = await Producto.findAll({ limit: 3 });
-    const items = productos.map((p, i) => ({ id: i + 1, productoId: p.id, nombre: p.nombre, precio: p.precio, cantidad: 2, subtotal: p.precio * 2 }));
-    res.json({ items, total: items.reduce((sum, item) => sum + item.subtotal, 0) });
+    try {
+        // Obtener productos del carrito del cliente        
+        const productos = await Producto.findAll(); 
+                
+        const items = productos.map((p, i) => ({ 
+            id: i + 1, 
+            productoId: p.id, 
+            nombre: p.nombre, 
+            precio: p.precio, 
+            cantidad: 1, // Cantidad por defecto
+            subtotal: p.precio
+        }));
+        
+        const total = items.reduce((sum, item) => sum + item.subtotal, 0);
+        res.json({ items, total });
+    } catch (error) {
+        res.status(500).json({ error: 'Error al obtener el carrito' });
+    }
 });
 
 app.post('/carrito', async (req, res) => {
@@ -149,27 +164,109 @@ app.delete('/guardados/:clienteId/:itemId', async (req, res) => {
 
 // 6. CHECKOUT
 app.get('/checkout/:clienteId', async (req, res) => {
-    const productos = await Producto.findAll({ limit: 2 });
-    const items = productos.map((p, i) => ({ id: i + 1, productoId: p.id, nombre: p.nombre, precio: p.precio, cantidad: 1, subtotal: p.precio }));
-    const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
-    res.json({ items, subtotal, envio: 5.00, total: subtotal + 5.00 });
+    try {
+        const metodosEnvio = await Envio.findAll();
+        if (metodosEnvio.length === 0) {
+            return res.status(500).json({ error: 'No hay métodos de envío configurados' });
+        }
+        const envioDefault = metodosEnvio[0].precio;
+        res.json({ 
+            metodosEnvio, 
+            envio: envioDefault
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Error al obtener datos del checkout' });
+    }
 });
 
+
 app.post('/checkout/completarorden', async (req, res) => {
-    const pago = await Pago.create({ metodo: req.body.metodoPago, datos: JSON.stringify(req.body.datosPago), monto: 25.00 });
-    const envio = await Envio.create({ metodo: req.body.metodoEnvio, direccion: req.body.direccion });
-    const pedido = await Pedido.create({
-        numero: `PED${Date.now()}`, 
-        fecha_pedido: new Date(), 
-        precio_total: 25.00,
-        direccion: req.body.direccion, 
-        correo: req.body.correo, 
-        clienteId: req.body.clienteId, 
-        estadoPedidoId: 1, 
-        pagoId: pago.id, 
-        envioId: envio.id
-    });
-    res.status(201).json({ mensaje: 'Orden completada', pedido: { id: pedido.id, numero: pedido.numero } });
+    try {
+        const { 
+            metodoPago, 
+            datosPago, 
+            metodoEnvioId, 
+            correo, 
+            clienteId, 
+            subtotal, 
+            items,
+            shippingDetails 
+        } = req.body;
+        
+        // Validaciones básicas
+        if (!items || items.length === 0) {
+            return res.status(400).json({ error: 'No hay productos en el carrito' });
+        }
+        
+        if (!metodoEnvioId) {
+            return res.status(400).json({ error: 'Método de envío requerido' });
+        }
+        
+        // Validar que el método de envío existe
+        const metodoEnvio = await Envio.findByPk(metodoEnvioId);
+        if (!metodoEnvio) {
+            return res.status(400).json({ error: 'Método de envío no válido' });
+        }
+        
+        // Calcular total con precio real de envío
+        const precioEnvio = metodoEnvio.precio;
+        const precioTotal = subtotal + precioEnvio;
+        
+        // Crear registro de pago
+        const pago = await Pago.create({ 
+            metodo: metodoPago, 
+            datos: JSON.stringify(datosPago), 
+            monto: precioTotal 
+        });
+        
+        // Crear pedido
+        const pedido = await Pedido.create({
+            numero: `PED${Date.now()}`, 
+            fecha_pedido: new Date(), 
+            precio_total: precioTotal,
+            direccion: shippingDetails?.address || '', 
+            correo: correo, 
+            clienteId: clienteId, 
+            estadoPedidoId: 1, 
+            pagoId: pago.id, 
+            envioId: metodoEnvioId
+        });
+        
+        // Crear registros de productos del pedido
+        const pedidoProductos = items.map(item => ({
+            pedidoId: pedido.id,
+            productoId: item.id,
+            cantidad: item.quantity,
+            precio_unitario: item.price
+        }));
+        
+        await Pedido_Producto.bulkCreate(pedidoProductos);
+        
+        // Respuesta exitosa
+        res.status(201).json({ 
+            mensaje: 'Orden completada exitosamente', 
+            pedido: { 
+                id: pedido.id, 
+                numero: pedido.numero 
+            },
+            resumen: {
+                itemsCount: items.length,
+                subtotal: subtotal,
+                precioEnvio: precioEnvio,
+                precioTotal: precioTotal
+            },
+            metodoEnvio: {
+                id: metodoEnvio.id,
+                nombre: metodoEnvio.nombre,
+                dias: metodoEnvio.dias,
+                precio: metodoEnvio.precio
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error al completar orden:', error);
+        res.status(500).json({ error: 'Error interno del servidor al procesar la orden' });
+    }
 });
 
 app.get('/generarqr/:pedidoId', async (req, res) => {
