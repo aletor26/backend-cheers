@@ -18,7 +18,13 @@ export const Cliente = sequelize.define('Cliente', {
     telefono: {
         type: DataTypes.STRING,
         allowNull: false,
+    },
+    dni: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true
     }
+
 }, {
     freezeTableName: true
 });

@@ -202,8 +202,8 @@ app.post('/login', async (req, res) => {
 // REGISTRO
 app.post('/register', async (req, res) => {
     try {
-        const { nombre, correo, clave, direccion, telefono } = req.body;
-        const usuario = await Usuario.create({ nombre, correo, clave });
+        const { nombre,apellido, correo, clave, direccion, telefono } = req.body;
+        const usuario = await Usuario.create({ nombre,apellido, correo, clave });
         const cliente = await Cliente.create({ id: usuario.id, direccion, telefono });
         res.status(201).json({ usuario, cliente });
     } catch (err) {
