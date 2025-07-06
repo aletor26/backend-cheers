@@ -14,6 +14,10 @@ export const Envio = sequelize.define('Envio', {
     dias:{
         type: DataTypes.INTEGER,
         allowNull: false,
+    },
+    precio: {
+        type: DataTypes.FLOAT,
+        allowNull: false,
     }
 }, {
     freezeTableName: true
