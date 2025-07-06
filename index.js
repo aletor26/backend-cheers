@@ -10,9 +10,11 @@ import { Pago } from './models/Pago.js';
 import { Envio } from './models/Envio.js';
 import { Estado_Pedido } from './models/Estado_Pedido.js';
 import { Pedido_Producto } from './models/Pedido_Producto.js';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT;
 app.use(express.json());
 
 // ------------------------------ ALUMNO 1 -----------------------------

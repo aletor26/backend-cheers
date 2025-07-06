@@ -27,11 +27,16 @@ export const Producto = sequelize.define('Producto', {
     // Relaciones
     // Se asume que Producto puede estar asociado a una Oferta, Categoria y Estado
     categoriaId: { 
-        type: DataTypes.INTEGER, allowNull: false 
-    },  // FK a Categoria
+        type: DataTypes.INTEGER, 
+        allowNull: false, 
+        field: 'categoriaId'
+    },
     estadoId: { 
-        type: DataTypes.INTEGER, allowNull: false 
-    }      // FK a Estado
+        type: DataTypes.INTEGER, 
+        allowNull: false,
+        field: 'estadoId'
+    }
+     // FK a Estado
 }, {
     freezeTableName: true
 });
