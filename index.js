@@ -9,7 +9,7 @@ import { Oferta } from './models/Oferta.js';
 import { Pago } from './models/Pago.js';
 import { Envio } from './models/Envio.js';
 import { Estado_Pedido } from './models/Estado_Pedido.js';
-import { Pedido_Producto } from './models/Pedido_producto.js';
+import { Pedido_Producto } from './models/Pedido_Producto.js';
 
 const app = express();
 const port = 3000;
