@@ -27,9 +27,6 @@ Producto.belongsToMany(Pedido, { through: Pedido_Producto, foreignKey: 'producto
 Pedido_Producto.belongsTo(Pedido, { foreignKey: 'pedidoId' });
 Pedido_Producto.belongsTo(Producto, { foreignKey: 'productoId' });
 
-// Producto pertenece a Oferta (opcional)
-Producto.belongsTo(Oferta, { foreignKey: 'ofertaId' });
-Oferta.hasMany(Producto, { foreignKey: 'ofertaId' });
 
 // Producto pertenece a Categoria
 Producto.belongsTo(Categoria, { foreignKey: 'categoriaId' });
