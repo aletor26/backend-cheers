@@ -10,10 +10,6 @@ export const Administrador = sequelize.define('Administrador', {
             model: Usuario,
             key: 'id'
         }
-    },
-    permisos: {
-        type: DataTypes.STRING,
-        allowNull: false,
     }
 }, {
     freezeTableName: true
