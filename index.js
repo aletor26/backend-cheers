@@ -431,17 +431,36 @@ app.get('/usuarios/:id/ordenes', async (req, res) => {
   }
 });
 
-// Obtener detalle de una orden de un usuario por id
+// Obtener detalle de un pedido de un cliente por id
 app.get('/usuarios/:id/ordenes/:ordenId', async (req, res) => {
-  const { id, ordenId } = req.params;
-  try {
-    const orden = await Orden.findOne({ where: { id: ordenId, userId: id } });
-    if (!orden) return res.status(404).json({ error: 'Orden no encontrada' });
-    res.json(orden);
-  } catch (err) {
-    res.status(500).json({ error: 'Error al obtener la orden' });
-  }
-});
+    const { id, ordenId } = req.params;
+    try {
+      const pedido = await Pedido.findOne({
+        where: { id: ordenId, clienteId: id },
+        include: [
+          // Productos del pedido (muchos a muchos)
+          {
+            model: Producto,
+            through: {
+              attributes: ['cantidad'] // Incluye la cantidad desde Pedido_Producto
+            }
+          },
+          // Cliente
+          { model: Cliente, include: [{ model: Usuario }] },
+          // Estado del pedido
+          { model: Estado_Pedido },
+          // Pago
+          { model: Pago },
+          // Envío
+          { model: Envio }
+        ]
+      });
+      if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado' });
+      res.json(pedido);
+    } catch (err) {
+      res.status(500).json({ error: 'Error al obtener el pedido' });
+    }
+  });
 
 // Obtener datos del usuario por id
 app.get('/usuarios/:id', async (req, res) => {
