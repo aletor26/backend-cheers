@@ -383,10 +383,39 @@ app.get('/clientes/:id/pedidos', async (req, res) => {
 
 // DETALLE DE ORDEN
 app.get('/pedidos/:id', async (req, res) => {
-    const pedido = await Pedido.findByPk(req.params.id);
-    if (!pedido) return res.status(404).json({ error: 'No encontrado' });
+  try {
+    const pedido = await Pedido.findByPk(req.params.id, {
+            include: [
+        {
+            model: Cliente,
+            include: {
+            model: Usuario,
+            attributes: ['nombre', 'apellido', 'correo'] // ✅ sin 'telefono'
+            },
+            attributes: ['direccion', 'telefono', 'dni'] // ✅ aquí sí puedes pedir teléfono
+        },
+        {
+            model: Producto,
+            through: { attributes: ['cantidad'] }
+        },
+            Envio,
+            Pago,
+            Estado_Pedido
+        ]
+    });
+
+    if (!pedido) {
+      console.log('❌ Pedido no encontrado o relaciones vacías:', req.params.id);
+      return res.status(404).json({ error: 'Pedido no encontrado' });
+    }
+
     res.json(pedido);
+  } catch (error) {
+    console.error('💥 Error al obtener el pedido:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
 });
+
 
 // CANCELAR ORDEN
 app.put('/pedidos/:id/cancelar', async (req, res) => {
