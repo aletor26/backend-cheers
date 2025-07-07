@@ -23,6 +23,15 @@ export const Usuario = sequelize.define('Usuario', {
     clave: {
         type: DataTypes.STRING,
         allowNull: false,
+    },
+    estadoid: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1, // 1 = Activo por defecto
+        references: {
+            model: 'Estado',
+            key: 'id'
+        }
     }
 }, {
     freezeTableName: true

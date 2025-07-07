@@ -9,9 +9,9 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const insertFiles = [
-  'Usuario.sql',
   'Categoria.sql',
   'Estado.sql',
+  'Usuario.sql',
   'Estado_Pedido.sql',
   'Envio.sql',
   'Cliente.sql',

@@ -51,3 +51,7 @@ Pago.hasMany(Pedido, { foreignKey: 'pagoId' });
 // Pedido tiene un Envio
 Pedido.belongsTo(Envio, { foreignKey: 'envioId' });
 Envio.hasMany(Pedido, { foreignKey: 'envioId' });
+
+// Usuario tiene un Estado
+Usuario.belongsTo(Estado, { foreignKey: 'estadoid' });
+Estado.hasMany(Usuario, { foreignKey: 'estadoid' });

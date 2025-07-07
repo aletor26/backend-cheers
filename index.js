@@ -10,12 +10,16 @@ import { Pago } from './models/Pago.js';
 import { Envio } from './models/Envio.js';
 import { Estado_Pedido } from './models/Estado_Pedido.js';
 import { Pedido_Producto } from './models/Pedido_Producto.js';
+import { Estado } from './models/Estado.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT;
 app.use(express.json());
+
+// Importar relaciones después de que todos los modelos estén definidos
+import './models/relaciones.js';
 
 // ------------------------------ ALUMNO 1 -----------------------------
 
@@ -291,9 +295,16 @@ app.get('/pedidocompletado/:pedidoId', async (req, res) => {
 // LOGIN
 app.post('/login', async (req, res) => {
     const { correo, clave } = req.body;
-    const usuario = await Usuario.findOne({ where: { correo } });
+    const usuario = await Usuario.findOne({ 
+        where: { correo },
+        include: [{ model: Estado, attributes: ['id', 'nombre'] }]
+    });
     if (!usuario || usuario.clave !== clave) {
         return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
+    // Verificar si el usuario está activo
+    if (usuario.estadoid !== 1) {
+        return res.status(403).json({ error: 'Usuario inactivo' });
     }
     res.json({ mensaje: 'Login exitoso', usuario });
 });
@@ -396,7 +407,8 @@ app.get('/usuarios/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const usuario = await Usuario.findByPk(id, {
-      attributes: ['id', 'nombre', 'apellido', 'email', 'dni', 'role', 'activo', 'createdAt']
+      attributes: ['id', 'nombre', 'apellido', 'correo', 'estadoid', 'createdAt'],
+      include: [{ model: Estado, attributes: ['id', 'nombre'] }]
     });
     if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
     res.json(usuario);
@@ -552,15 +564,19 @@ app.put("/admin/producto/:id", async (req, res) => {
 
 // Listar usuarios (con filtros y paginación)
 app.get('/admin/usuarios', async (req, res) => {
-    const { id, nombre, apellido, page = 1, limit = 10 } = req.query;
+    const { id, nombre, apellido, estadoid, page = 1, limit = 10 } = req.query;
     const where = {};
     if (id) where.id = id;
     if (nombre) where.nombre = { [sequelize.Op.like]: `%${nombre}%` };
     if (apellido) where.apellido = { [sequelize.Op.like]: `%${apellido}%` };
+    if (estadoid) where.estadoid = estadoid;
+    
     const usuarios = await Usuario.findAndCountAll({
         where,
+        include: [{ model: Estado, attributes: ['id', 'nombre'] }],
         offset: (page - 1) * limit,
-        limit: parseInt(limit)
+        limit: parseInt(limit),
+        order: [['createdAt', 'DESC']]
     });
     res.json(usuarios);
 });
@@ -569,7 +585,7 @@ app.get('/admin/usuarios', async (req, res) => {
 app.put('/admin/usuarios/:id/desactivar', async (req, res) => {
     const usuario = await Usuario.findByPk(req.params.id);
     if (!usuario) return res.status(404).json({ error: 'No encontrado' });
-    usuario.activo = false;
+    usuario.estadoid = 2; // Inactivo
     await usuario.save();
     res.json({ mensaje: 'Usuario desactivado', usuario });
 });
@@ -578,7 +594,7 @@ app.put('/admin/usuarios/:id/desactivar', async (req, res) => {
 app.put('/admin/usuarios/:id/activar', async (req, res) => {
     const usuario = await Usuario.findByPk(req.params.id);
     if (!usuario) return res.status(404).json({ error: 'No encontrado' });
-    usuario.activo = true;
+    usuario.estadoid = 1; // Activo
     await usuario.save();
     res.json({ mensaje: 'Usuario activado', usuario });
 });
