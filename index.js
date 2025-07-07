@@ -11,6 +11,7 @@ import { Envio } from './models/Envio.js';
 import { Estado_Pedido } from './models/Estado_Pedido.js';
 import { Pedido_Producto } from './models/Pedido_Producto.js';
 import { Estado } from './models/Estado.js';
+import { Administrador } from './models/Administrador.js';
 import dotenv from 'dotenv';
 import cors from 'cors';
 dotenv.config();
@@ -295,21 +296,42 @@ app.get('/pedidocompletado/:pedidoId', async (req, res) => {
 
 //------------------------------ALUMNO 3 -----------------------------
 // LOGIN
+
+
 app.post('/login', async (req, res) => {
-    const { correo, clave } = req.body;
-    const usuario = await Usuario.findOne({ 
-        where: { correo },
-        include: [{ model: Estado, attributes: ['id', 'nombre'] }]
-    });
-    if (!usuario || usuario.clave !== clave) {
-        return res.status(401).json({ error: 'Credenciales inválidas' });
+  const { correo, clave } = req.body;
+
+  const usuario = await Usuario.findOne({
+    where: { correo },
+    include: [{ model: Estado, attributes: ['id', 'nombre'] }]
+  });
+
+  if (!usuario || usuario.clave !== clave) {
+    return res.status(401).json({ error: 'Credenciales inválidas' });
+  }
+
+  // Verificar si el usuario está activo
+  if (usuario.estadoid !== 1) {
+    return res.status(403).json({ error: 'Usuario inactivo' });
+  }
+
+  // Buscar en tabla Administrador
+  const esAdmin = await Administrador.findOne({ where: { id: usuario.id } });
+  const rol = esAdmin ? 'admin' : 'customer';
+
+  res.json({
+    mensaje: 'Login exitoso',
+    usuario: {
+      id: usuario.id,
+      nombre: usuario.nombre,
+      apellido: usuario.apellido,
+      correo: usuario.correo,
+      activo: usuario.estadoid === 1,
+      rol // 👈 Este campo es fundamental para el frontend
     }
-    // Verificar si el usuario está activo
-    if (usuario.estadoid !== 1) {
-        return res.status(403).json({ error: 'Usuario inactivo' });
-    }
-    res.json({ mensaje: 'Login exitoso', usuario });
+  });
 });
+
 
 // REGISTRO
 app.post('/register', async (req, res) => {
