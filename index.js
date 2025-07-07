@@ -43,7 +43,8 @@ app.post('/productos', async (req, res) => {
         const producto = await Producto.create(req.body);
         res.status(201).json(producto);
     } catch (err) {
-        res.status(400).json({ error: err.message });
+        console.error('Error al crear producto:', err); // 👈 Agrega esto
+        res.status(400).json({ error: err.message });    
     }
 });
 
@@ -523,7 +524,7 @@ app.get("/admin/productos", async (req, res) => {
         const productos = await Producto.findAll({ where });
         res.json({ productos, total: productos.length });
     } catch (error) {
-        res.status(500).send("Error del servidor");
+       res.status(500).json({ error: "Error del servidor" });
     }
 });
 
@@ -539,7 +540,7 @@ app.put("/admin/producto/:id/activar", async (req, res) => {
             res.status(404).send("Producto no encontrado");
         }
     } catch (error) {
-        res.status(500).send("Error del servidor");
+        res.status(500).json({ error: "Error del servidor" });
     }
 });
 
@@ -561,18 +562,21 @@ app.put("/admin/producto/:id/desactivar", async (req, res) => {
 
 // Agregar producto
 app.post("/admin/producto", async (req, res) => {
-    try {
-        const data = req.body;
-        if (data.nombre && data.descripcion && data.precio && data.categoriaId && data.estadoId) {
-            const nuevo = await Producto.create(data);
-            res.status(201).json(nuevo);
-        } else {
-            res.status(400).send("Faltan datos para la creacion");
-        }
-    } catch (error) {
-        res.status(500).send("Error del servidor");
+  try {
+    const data = req.body;
+    if (data.nombre && data.descripcion && data.precio && data.categoriaId && data.estadoId) {
+      console.log("Datos recibidos:", req.body);
+      const nuevo = await Producto.create(data);
+      res.status(201).json(nuevo);
+    } else {
+      res.status(400).json({ error: "Faltan datos para la creación" }); // <-- ✅ Aquí
     }
+  } catch (error) {
+    console.error("Error al crear producto:", error);
+    res.status(500).json({ error: error.message || "Error del servidor" }); // <-- ✅ Aquí
+  }
 });
+
 
 // Detalle de producto (ver, modificar)
 app.get("/admin/producto/:id", async (req, res) => {
