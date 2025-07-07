@@ -561,19 +561,27 @@ app.put("/admin/producto/:id/desactivar", async (req, res) => {
 });
 
 // Agregar producto
-app.post("/admin/producto", async (req, res) => {
+app.post('/admin/producto', async (req, res) => {
   try {
-    const data = req.body;
-    if (data.nombre && data.descripcion && data.precio && data.categoriaId && data.estadoId) {
-      console.log("Datos recibidos:", req.body);
-      const nuevo = await Producto.create(data);
-      res.status(201).json(nuevo);
-    } else {
-      res.status(400).json({ error: "Faltan datos para la creación" }); // <-- ✅ Aquí
-    }
-  } catch (error) {
-    console.error("Error al crear producto:", error);
-    res.status(500).json({ error: error.message || "Error del servidor" }); // <-- ✅ Aquí
+    // Paso 1: Obtener el último ID si es necesario
+    const ultimo = await Producto.max('id');
+    const nuevoId = (ultimo || 0) + 1;
+
+    // Paso 2: Crear el producto con ese ID si es necesario
+    const producto = await Producto.create({
+      id: nuevoId, // 👈 lo seteamos manualmente
+      nombre: req.body.nombre,
+      descripcion: req.body.descripcion,
+      precio: req.body.precio,
+      url_imagen: req.body.url_imagen,
+      categoriaId: req.body.categoriaId,
+      estadoId: req.body.estadoId
+    });
+
+    res.status(201).json(producto);
+  } catch (err) {
+    console.error('Error al crear producto:', err);
+    res.status(400).json({ error: err.message });
   }
 });
 
