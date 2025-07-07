@@ -17,7 +17,8 @@ const insertFiles = [
   'Cliente.sql',
   'Administrador.sql',
   'Productos.sql',
-  'Oferta.sql'
+  'Oferta.sql',
+  'Pago.sql'
 ];
 
 const runInserts = async () => {

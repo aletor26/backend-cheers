@@ -223,9 +223,12 @@ app.post('/checkout/completarorden', async (req, res) => {
         const precioTotal = subtotal + precioEnvio;
 
         // Crear el pago
-        const pago = await Pago.create({ 
-            nombre: metodoPago // este campo se llama "nombre"
-        });
+        // ✅ Buscar el tipo de pago (qr o credit card)
+        const pago = await Pago.findOne({ where: { nombre: metodoPago } });
+        if (!pago) {
+        return res.status(400).json({ error: 'Método de pago no válido' });
+        }
+
 
         // Crear el pedido
         const pedido = await Pedido.create({
