@@ -204,25 +204,30 @@ app.post('/checkout/completarorden', async (req, res) => {
         if (!metodoEnvioId) {
             return res.status(400).json({ error: 'Método de envío requerido' });
         }
-        
-        // Validar que el método de envío existe
+
+        // Validar método de envío
         const metodoEnvio = await Envio.findByPk(metodoEnvioId);
         if (!metodoEnvio) {
             return res.status(400).json({ error: 'Método de envío no válido' });
         }
-        
-        // Calcular total con precio real de envío
+
+        // 🔍 Validar existencia de productos
+        for (const item of items) {
+            const productoExiste = await Producto.findByPk(item.id);
+            if (!productoExiste) {
+                return res.status(400).json({ error: `El producto con ID ${item.id} no existe.` });
+            }
+        }
+
         const precioEnvio = metodoEnvio.precio;
         const precioTotal = subtotal + precioEnvio;
-        
-        // Crear registro de pago
+
+        // Crear el pago
         const pago = await Pago.create({ 
-            metodo: metodoPago, 
-            datos: JSON.stringify(datosPago), 
-            monto: precioTotal 
+            nombre: metodoPago // este campo se llama "nombre"
         });
-        
-        // Crear pedido
+
+        // Crear el pedido
         const pedido = await Pedido.create({
             numero: `PED${Date.now()}`, 
             fecha_pedido: new Date(), 
@@ -234,18 +239,18 @@ app.post('/checkout/completarorden', async (req, res) => {
             pagoId: pago.id, 
             envioId: metodoEnvioId
         });
-        
-        // Crear registros de productos del pedido
+
+        // Crear relación Pedido_Producto
         const pedidoProductos = items.map(item => ({
             pedidoId: pedido.id,
             productoId: item.id,
             cantidad: item.quantity,
             precio_unitario: item.price
         }));
-        
+
         await Pedido_Producto.bulkCreate(pedidoProductos);
-        
-        // Respuesta exitosa
+
+        // Éxito
         res.status(201).json({ 
             mensaje: 'Orden completada exitosamente', 
             pedido: { 
@@ -265,7 +270,7 @@ app.post('/checkout/completarorden', async (req, res) => {
                 precio: metodoEnvio.precio
             }
         });
-        
+
     } catch (error) {
         console.error('Error al completar orden:', error);
         res.status(500).json({ error: 'Error interno del servidor al procesar la orden' });
