@@ -78,14 +78,7 @@ app.get('/categorias/:id', async (req, res) => {
     res.json(categoria);
 });
 
-app.post('/categorias', async (req, res) => {
-    try {
-        const categoria = await Categoria.create(req.body);
-        res.status(201).json(categoria);
-    } catch (err) {
-        res.status(400).json({ error: err.message });
-    }
-});
+
 
 app.put('/categorias/:id', async (req, res) => {
     const categoria = await Categoria.findByPk(req.params.id);
@@ -397,14 +390,7 @@ app.put('/pedidos/:id/cancelar', async (req, res) => {
 });
 // ------------------------------ ALUMNO 4 -----------------------------
 // Obtener lista de categorías
-app.get('/categorias', async (req, res) => {
-  try {
-    const categorias = await Categoria.findAll();
-    res.json(categorias);
-  } catch (err) {
-    res.status(500).json({ error: 'Error al obtener categorías' });
-  }
-});
+
 
 // Agregar nueva categoría
 app.post('/categorias', async (req, res) => {
