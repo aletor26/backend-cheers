@@ -438,25 +438,30 @@ app.get('/usuarios/:id/ordenes/:ordenId', async (req, res) => {
       const pedido = await Pedido.findOne({
         where: { id: ordenId, clienteId: id },
         include: [
-          // Productos del pedido (muchos a muchos)
           {
-            model: Producto,
-            through: {
-              attributes: ['cantidad'] // Incluye la cantidad desde Pedido_Producto
-            }
+            model: Pedido_Producto,
+            include: [{ model: Producto }]
           },
-          // Cliente
           { model: Cliente, include: [{ model: Usuario }] },
-          // Estado del pedido
           { model: Estado_Pedido },
-          // Pago
           { model: Pago },
-          // Envío
           { model: Envio }
         ]
       });
       if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado' });
-      res.json(pedido);
+  
+      // Transforma la respuesta para que el frontend lo tenga fácil
+      const productos = (pedido.Pedido_Productos || pedido.Pedido_Producto || []).map(pp => ({
+        id: pp.producto?.id,
+        name: pp.producto?.nombre,
+        quantity: pp.cantidad,
+        price: pp.producto?.precio
+      }));
+  
+      res.json({
+        ...pedido.toJSON(),
+        productos // <-- así el frontend puede mapear fácil
+      });
     } catch (err) {
       res.status(500).json({ error: 'Error al obtener el pedido' });
     }
