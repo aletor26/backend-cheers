@@ -12,10 +12,12 @@ import { Estado_Pedido } from './models/Estado_Pedido.js';
 import { Pedido_Producto } from './models/Pedido_Producto.js';
 import { Estado } from './models/Estado.js';
 import dotenv from 'dotenv';
+import cors from 'cors';
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT;
+app.use(cors());
 app.use(express.json());
 
 // Importar relaciones después de que todos los modelos estén definidos
