@@ -335,15 +335,37 @@ app.post('/login', async (req, res) => {
 
 // REGISTRO
 app.post('/register', async (req, res) => {
-    try {
-        const { nombre,apellido, correo, clave, direccion, telefono } = req.body;
-        const usuario = await Usuario.create({ nombre,apellido, correo, clave });
-        const cliente = await Cliente.create({ id: usuario.id, direccion, telefono });
-        res.status(201).json({ usuario, cliente });
-    } catch (err) {
-        res.status(400).json({ error: err.message });
+  try {
+    const { nombre, apellido, correo, clave, direccion, telefono, dni } = req.body;
+    // ✅ Verificar si el correo ya existe
+    const existe = await Usuario.findOne({ where: { correo } });
+    if (existe) {
+      return res.status(400).json({ error: 'El correo ya está registrado' });
     }
+
+    const usuario = await Usuario.create({ nombre, apellido, correo, clave });
+    const cliente = await Cliente.create({ id: usuario.id, direccion, telefono, dni }); // ✅ ahora sí incluye dni
+
+
+    const rol = 'customer';
+
+    res.status(201).json({
+      mensaje: 'Registro exitoso',
+      usuario: {
+        id: usuario.id,
+        nombre: usuario.nombre,
+        apellido: usuario.apellido,
+        correo: usuario.correo,
+        activo: usuario.estadoid === 1,
+        rol
+      }
+    });
+  } catch (err) {
+    console.error('Error en /register:', err);
+    res.status(400).json({ error: 'Error al registrar usuario' });
+  }
 });
+
 
 // RESUMEN DE ÓRDENES DEL USUARIO
 app.get('/clientes/:id/pedidos', async (req, res) => {
