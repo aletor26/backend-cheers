@@ -479,30 +479,28 @@ app.put('/usuarios/:id', async (req, res) => {
   }
 });
 
-// Cambiar contraseña de un usuario por id
-app.post('/usuarios/:id/cambiar-password', async (req, res) => {
-  const { id } = req.params;
-  const { actual, nueva } = req.body;
-  if (!actual || !nueva) {
-    return res.status(400).json({ error: 'Debes enviar la contraseña actual y la nueva' });
+// Recuperar contraseña (olvidada)
+app.post('/forgot-password', async (req, res) => {
+  const { correo, nueva } = req.body;
+
+  if (!correo || !nueva) {
+    return res.status(400).json({ error: 'Faltan campos requeridos' });
   }
-  if (nueva.length < 6) {
-    return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres' });
-  }
+
   try {
-    const usuario = await Usuario.findByPk(id);
+    const usuario = await Usuario.findOne({ where: { correo } });
     if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
-    const esValida = await usuario.validarPassword(actual);
-    if (!esValida) {
-      return res.status(400).json({ error: 'Contraseña actual incorrecta' });
-    }
-    usuario.password = nueva;
+
+    usuario.clave = nueva;
     await usuario.save();
+
     res.json({ mensaje: 'Contraseña actualizada correctamente' });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Error al cambiar la contraseña' });
   }
 });
+
 
 // ------------------------------ ALUMNO 5 -----------------------------
 // Lista de productos (mantenimiento, paginación, filtro, activar/desactivar)
