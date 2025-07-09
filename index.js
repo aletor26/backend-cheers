@@ -20,9 +20,17 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT;
 app.use(cors({
-    origin: [
-      'https://aletor26.github.io/prograweb-proy-final'
-    ]
+    origin: function (origin, callback) {
+      // Permitir peticiones sin origin (como Postman) o desde los orígenes permitidos
+      if (!origin || [
+        'https://aletor26.github.io',
+        'http://localhost:5173'
+      ].includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    }
   }));
 app.use(express.json());
 
