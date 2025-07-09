@@ -25,6 +25,8 @@ app.use(express.json());
 // Importar relaciones después de que todos los modelos estén definidos
 import './models/relaciones.js';
 
+
+
 // ------------------------------ ALUMNO 1 -----------------------------
 
 // PRODUCTOS
@@ -432,21 +434,38 @@ app.put('/pedidos/:id/cancelar', async (req, res) => {
 
 // Agregar nueva categoría
 app.post('/categorias', async (req, res) => {
-  const { name, description, image } = req.body;
-  if (!name || typeof name !== 'string' || name.trim() === '') {
+  const { nombre, descripcion, imagen } = req.body;
+
+  if (!nombre || typeof nombre !== 'string' || nombre.trim() === '') {
     return res.status(400).json({ error: 'Nombre de categoría requerido' });
   }
+
   try {
-    const existe = await Categoria.findOne({ where: { name } });
+    const existe = await Categoria.findOne({ where: { nombre } });
     if (existe) {
       return res.status(409).json({ error: 'La categoría ya existe' });
     }
-    const nuevaCategoria = await Categoria.create({ name, description, image, active: true });
+
+    // 🚨 Opción 1: Forzar id manualmente
+    const maxId = await Categoria.max('id') || 0;
+
+    const nuevaCategoria = await Categoria.create({
+      id: maxId + 1, // ⚠️ Forzamos el siguiente id
+      nombre: nombre.trim(),
+      descripcion: descripcion?.trim() || '',
+      imagen: imagen?.trim() || ''
+    });
+
     res.status(201).json(nuevaCategoria);
   } catch (err) {
+    console.error('Error al crear categoría:', err);
     res.status(500).json({ error: 'Error al crear categoría' });
   }
 });
+
+
+
+
 
 // Listar todas las órdenes de un usuario por id
 app.get('/usuarios/:id/ordenes', async (req, res) => {
