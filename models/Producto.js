@@ -23,6 +23,11 @@ export const Producto = sequelize.define('Producto', {
         type: DataTypes.STRING,
         allowNull: true,
     },
+    stock: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0
+    },
 
     // Relaciones
     // Se asume que Producto puede estar asociado a una Oferta, Categoria y Estado
