@@ -215,12 +215,24 @@ app.post('/checkout/completarorden', async (req, res) => {
         }
 
         // 🔍 Validar existencia de productos
-        for (const item of items) {
-            const productoExiste = await Producto.findByPk(item.id);
-            if (!productoExiste) {
-                return res.status(400).json({ error: `El producto con ID ${item.id} no existe.` });
-            }
+      for (const item of items) {
+        const producto = await Producto.findByPk(item.id);
+        
+        if (!producto) {
+          return res.status(400).json({ error: `El producto con ID ${item.id} no existe.` });
         }
+
+        if (producto.stock < item.quantity) {
+          return res.status(400).json({ 
+            error: `No hay suficiente stock del producto "${producto.nombre}". Stock disponible: ${producto.stock}` 
+          });
+        }
+
+        // Reducir stock
+        producto.stock -= item.quantity;
+        await producto.save();
+      }
+
 
         const precioEnvio = metodoEnvio.precio;
         const precioTotal = subtotal + precioEnvio;
