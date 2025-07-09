@@ -1,2 +1,2 @@
 INSERT INTO "Administrador" (id, "createdAt", "updatedAt") VALUES 
-(100, NOW(), NOW());
+(1, NOW(), NOW());
