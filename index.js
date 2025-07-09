@@ -663,6 +663,124 @@ app.put("/admin/producto/:id", async (req, res) => {
     }
 });
 
+// ==================== DASHBOARD ENDPOINT ====================
+
+// OBTENER ESTADÍSTICAS DEL DASHBOARD
+app.get('/admin/dashboard', async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      
+      // Crear filtros de fecha si se proporcionan
+      const dateFilter = {};
+      if (startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        
+        dateFilter.fecha_pedido = {
+          [Op.between]: [start, end]
+        };
+      }
+      
+      // Obtener estadísticas de pedidos
+      const pedidosStats = await Pedido.findAndCountAll({
+        where: dateFilter,
+        include: [
+          { model: Estado_Pedido },
+          { 
+            model: Cliente, 
+            include: [{ model: Usuario }] 
+          }
+        ]
+      });
+      
+      // Obtener estadísticas de usuarios nuevos
+      const userDateFilter = {};
+      if (startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        
+        userDateFilter.createdAt = {
+          [Op.between]: [start, end]
+        };
+      }
+      
+      const usuariosStats = await Usuario.findAndCountAll({
+        where: userDateFilter,
+        include: [{ model: Estado, attributes: ['id', 'nombre'] }]
+      });
+      
+      // Calcular ingresos totales (solo pedidos completados)
+      const pedidosCompletados = await Pedido.findAll({
+        where: {
+          ...dateFilter,
+          estadoPedidoId: 3 // Asumiendo que 3 = Completado
+        },
+        attributes: ['precio_total']
+      });
+      
+      const totalIncome = pedidosCompletados.reduce((sum, pedido) => {
+        return sum + (pedido.precio_total || 0);
+      }, 0);
+      
+      // Obtener estadísticas adicionales
+      const totalPedidos = await Pedido.count();
+      const totalUsuarios = await Usuario.count();
+      const pedidosPendientes = await Pedido.count({
+        where: { estadoPedidoId: 1 } // Asumiendo que 1 = Pendiente
+      });
+      const pedidosProcesando = await Pedido.count({
+        where: { estadoPedidoId: 2 } // Asumiendo que 2 = Procesando
+      });
+      
+      // Calcular ingresos totales históricos
+      const ingresosHistoricos = await Pedido.findAll({
+        where: { estadoPedidoId: 3 }, // Solo completados
+        attributes: ['precio_total']
+      });
+      
+      const totalIncomeHistoric = ingresosHistoricos.reduce((sum, pedido) => {
+        return sum + (pedido.precio_total || 0);
+      }, 0);
+      
+      res.json({
+        success: true,
+        stats: {
+          // Estadísticas del período
+          periodStats: {
+            totalOrders: pedidosStats.count,
+            newUsers: usuariosStats.count,
+            totalIncome: totalIncome
+          },
+          // Estadísticas totales
+          totalStats: {
+            totalOrders: totalPedidos,
+            totalUsers: totalUsuarios,
+            totalIncome: totalIncomeHistoric,
+            pendingOrders: pedidosPendientes,
+            processingOrders: pedidosProcesando
+          },
+          // Detalles adicionales
+          details: {
+            period: {
+              startDate: startDate || null,
+              endDate: endDate || null
+            },
+            orders: pedidosStats.rows || [],
+            users: usuariosStats.rows || []
+          }
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error al obtener estadísticas del dashboard:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Error interno del servidor al obtener estadísticas' 
+      });
+    }
+  });
 
 // ------------------------------ ALUMNO 6 -----------------------------
 
