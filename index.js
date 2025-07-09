@@ -685,16 +685,15 @@ app.put("/admin/producto/:id", async (req, res) => {
 });
 
 app.get('/productos/por-categoria/:categoriaId', async (req, res) => {
-  const { categoriaId } = req.params;
-
   try {
-    const productos = await Producto.findAll({
-      where: { categoriaId: Number(categoriaId) }
-    });
+    const categoriaId = parseInt(req.params.categoriaId, 10);
+    if (isNaN(categoriaId)) return res.status(400).json({ error: 'ID de categoría inválido' });
+
+    const productos = await Producto.findAll({ where: { categoriaId } });
     res.json(productos);
-  } catch (error) {
-    console.error('Error al obtener productos por categoría:', error);
-    res.status(500).json({ error: 'Error al obtener productos por categoría' });
+  } catch (err) {
+    console.error('Error al obtener productos por categoría:', err);
+    res.status(500).json({ error: 'Error del servidor' });
   }
 });
 
