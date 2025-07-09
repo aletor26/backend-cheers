@@ -615,14 +615,16 @@ app.post('/admin/producto', async (req, res) => {
 
     // Paso 2: Crear el producto con ese ID si es necesario
     const producto = await Producto.create({
-      id: nuevoId, // 👈 lo seteamos manualmente
-      nombre: req.body.nombre,
-      descripcion: req.body.descripcion,
-      precio: req.body.precio,
-      url_imagen: req.body.url_imagen,
-      categoriaId: req.body.categoriaId,
-      estadoId: req.body.estadoId
+    id: nuevoId,
+    nombre: req.body.nombre,
+    descripcion: req.body.descripcion,
+    precio: req.body.precio,
+    url_imagen: req.body.url_imagen,
+    categoriaId: req.body.categoriaId,
+    estadoId: req.body.estadoId,
+    stock: req.body.stock ?? 0 // 👈 Esto es lo que te faltaba
     });
+
 
     res.status(201).json(producto);
   } catch (err) {
