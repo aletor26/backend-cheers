@@ -342,17 +342,34 @@ app.post('/login', async (req, res) => {
 app.post('/register', async (req, res) => {
   try {
     const { nombre, apellido, correo, clave, direccion, telefono, dni } = req.body;
-    // ✅ Verificar si el correo ya existe
+
+    // Verificar si ya existe un usuario con ese correo
     const existe = await Usuario.findOne({ where: { correo } });
     if (existe) {
       return res.status(400).json({ error: 'El correo ya está registrado' });
     }
 
-    const usuario = await Usuario.create({ nombre, apellido, correo, clave });
-    const cliente = await Cliente.create({ id: usuario.id, direccion, telefono, dni }); // ✅ ahora sí incluye dni
+    // Obtener el último ID usado
+    const ultimoId = await Usuario.max('id') || 0;
+    const nuevoId = ultimoId + 1;
 
+    // Crear usuario con ID manual
+    const usuario = await Usuario.create({ 
+      id: nuevoId, // 👈 ID manual
+      nombre, 
+      apellido, 
+      correo, 
+      clave,
+      estadoid: 1 // o el valor por defecto que uses
+    });
 
-    const rol = 'customer';
+    // Crear cliente con el mismo ID
+    const cliente = await Cliente.create({ 
+      id: nuevoId,
+      direccion, 
+      telefono, 
+      dni 
+    });
 
     res.status(201).json({
       mensaje: 'Registro exitoso',
@@ -362,7 +379,7 @@ app.post('/register', async (req, res) => {
         apellido: usuario.apellido,
         correo: usuario.correo,
         activo: usuario.estadoid === 1,
-        rol
+        rol: 'customer'
       }
     });
   } catch (err) {
@@ -370,6 +387,7 @@ app.post('/register', async (req, res) => {
     res.status(400).json({ error: 'Error al registrar usuario' });
   }
 });
+
 
 
 // RESUMEN DE ÓRDENES DEL USUARIO
@@ -685,16 +703,15 @@ app.put("/admin/producto/:id", async (req, res) => {
 });
 
 app.get('/productos/por-categoria/:categoriaId', async (req, res) => {
-  const { categoriaId } = req.params;
-
   try {
-    const productos = await Producto.findAll({
-      where: { categoriaId: Number(categoriaId) }
-    });
+    const categoriaId = parseInt(req.params.categoriaId, 10);
+    if (isNaN(categoriaId)) return res.status(400).json({ error: 'ID de categoría inválido' });
+
+    const productos = await Producto.findAll({ where: { categoriaId } });
     res.json(productos);
-  } catch (error) {
-    console.error('Error al obtener productos por categoría:', error);
-    res.status(500).json({ error: 'Error al obtener productos por categoría' });
+  } catch (err) {
+    console.error('Error al obtener productos por categoría:', err);
+    res.status(500).json({ error: 'Error del servidor' });
   }
 });
 
