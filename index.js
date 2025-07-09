@@ -12,6 +12,7 @@ import { Estado_Pedido } from './models/Estado_Pedido.js';
 import { Pedido_Producto } from './models/Pedido_Producto.js';
 import { Estado } from './models/Estado.js';
 import { Administrador } from './models/Administrador.js';
+import { Op } from 'sequelize';
 import dotenv from 'dotenv';
 import cors from 'cors';
 dotenv.config();
@@ -421,7 +422,7 @@ app.get('/pedidos/:id', async (req, res) => {
 app.put('/pedidos/:id/cancelar', async (req, res) => {
     const pedido = await Pedido.findByPk(req.params.id);
     if (!pedido) return res.status(404).json({ error: 'No encontrado' });
-    pedido.estadoPedidoId = 2; // Suponiendo que 2 es "Cancelado"
+    pedido.estadoPedidoId = 4;
     await pedido.save();
     res.json({ mensaje: 'Pedido cancelado', pedido });
 });
@@ -799,6 +800,24 @@ app.put('/admin/pedidos/:id/cancelar', async (req, res) => {
     res.json({ mensaje: 'Pedido cancelado', pedido });
 });
 
+// Actualizar estado de un pedido (admin)
+app.put('/admin/pedidos/:id/estado', async (req, res) => {
+    try {
+      const pedido = await Pedido.findByPk(req.params.id);
+      if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado' });
+  
+      const { estadoPedidoId } = req.body;
+      if (!estadoPedidoId) return res.status(400).json({ error: 'Estado requerido' });
+  
+      pedido.estadoPedidoId = estadoPedidoId;
+      await pedido.save();
+  
+      res.json({ mensaje: 'Estado actualizado correctamente', pedido });
+    } catch (error) {
+      console.error('Error al actualizar estado del pedido:', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  });
 
 async function startServer() {
     try {
