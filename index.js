@@ -716,40 +716,78 @@ app.get('/admin/usuarios/:id', async (req, res) => {
 
 // Listar órdenes (con filtros y paginación)
 app.get('/admin/pedidos', async (req, res) => {
-    const { numero, nombre, apellido, page = 1, limit = 10 } = req.query;
-    const where = {};
-    if (numero) where.numero = { [sequelize.Op.like]: `%${numero}%` };
-    // Para filtrar por nombre/apellido del cliente:
-    let include = [];
-    if (nombre || apellido) {
-        include.push({
-            model: Cliente,
-            include: [{ model: Usuario, where: {
-                ...(nombre && { nombre: { [sequelize.Op.like]: `%${nombre}%` } }),
-                ...(apellido && { apellido: { [sequelize.Op.like]: `%${apellido}%` } })
-            }}]
+    try {
+        const { numero, nombre, apellido, page = 1, limit = 10 } = req.query;
+        const where = {};
+        if (numero) where.numero = { [sequelize.Op.like]: `%${numero}%` };
+        // Para filtrar por nombre/apellido del cliente:
+        let include = [
+            {
+                model: Cliente,
+                include: [{ model: Usuario }]
+            },
+            { model: Estado_Pedido }
+        ];
+        
+        if (nombre || apellido) {
+            include = [
+                {
+                    model: Cliente,
+                    include: [{ 
+                        model: Usuario, 
+                        where: {
+                            ...(nombre && { nombre: { [sequelize.Op.like]: `%${nombre}%` } }),
+                            ...(apellido && { apellido: { [sequelize.Op.like]: `%${apellido}%` } })
+                        }
+                    }]
+                },
+                { model: Estado_Pedido }
+            ];
+        }
+        
+        const pedidos = await Pedido.findAndCountAll({
+            where,
+            include,
+            offset: (page - 1) * limit,
+            limit: parseInt(limit),
+            order: [['fecha_pedido', 'DESC']]
         });
+        
+        res.json(pedidos);
+    } catch (error) {
+        console.error('Error al obtener pedidos admin:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
     }
-    const pedidos = await Pedido.findAndCountAll({
-        where,
-        include,
-        offset: (page - 1) * limit,
-        limit: parseInt(limit),
-        order: [['fecha_pedido', 'DESC']]
-    });
-    res.json(pedidos);
 });
 
 // Detalle de orden (admin)
 app.get('/admin/pedidos/:id', async (req, res) => {
-    const pedido = await Pedido.findByPk(req.params.id, {
-        include: [
-            { model: Pedido_Producto, include: [Producto] },
-            { model: Cliente, include: [Usuario] }
-        ]
-    });
-    if (!pedido) return res.status(404).json({ error: 'No encontrado' });
-    res.json(pedido);
+    try {
+        const pedido = await Pedido.findByPk(req.params.id, {
+            include: [
+                {
+                    model: Producto,
+                    through: { attributes: ['cantidad'] }
+                },
+                { 
+                    model: Cliente, 
+                    include: [{ model: Usuario }] 
+                },
+                { model: Estado_Pedido },
+                { model: Pago },
+                { model: Envio }
+            ]
+        });
+        
+        if (!pedido) {
+            return res.status(404).json({ error: 'Pedido no encontrado' });
+        }
+        
+        res.json(pedido);
+    } catch (error) {
+        console.error('Error al obtener pedido admin:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
 });
 
 // Cancelar orden (admin)
