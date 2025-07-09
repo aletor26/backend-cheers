@@ -21,7 +21,7 @@ const app = express();
 const port = process.env.PORT;
 app.use(cors({
     origin: [
-      'https://aletor26.github.io/prograweb-proy-final'  // Para producción
+      'https://aletor26.github.io/prograweb-proy-final'
     ]
   }));
 app.use(express.json());
