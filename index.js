@@ -19,7 +19,11 @@ dotenv.config();
 
 const app = express();
 const port = process.env.PORT;
-app.use(cors());
+app.use(cors({
+    origin: [
+      'https://aletor26.github.io/prograweb-proy-final'  // Para producción
+    ]
+  }));
 app.use(express.json());
 
 // Importar relaciones después de que todos los modelos estén definidos
