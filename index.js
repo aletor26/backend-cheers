@@ -515,7 +515,7 @@ app.get('/usuarios/:id', async (req, res) => {
 // Editar datos del usuario por id
 app.put('/usuarios/:id', async (req, res) => {
   const { id } = req.params;
-  const { nombre, apellido, email, dni } = req.body;
+  const { nombre, apellido, correo, clave } = req.body; // <-- usa 'correo' y 'clave'
 
   try {
     const usuario = await Usuario.findByPk(id);
@@ -523,8 +523,8 @@ app.put('/usuarios/:id', async (req, res) => {
 
     usuario.nombre = nombre ?? usuario.nombre;
     usuario.apellido = apellido ?? usuario.apellido;
-    usuario.email = email ?? usuario.email;
-    usuario.dni = dni ?? usuario.dni;
+    usuario.correo = correo ?? usuario.correo;
+    usuario.clave = clave ?? usuario.clave;
 
     await usuario.save();
     res.json({ mensaje: 'Datos actualizados correctamente', usuario });
