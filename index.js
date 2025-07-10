@@ -19,11 +19,25 @@ dotenv.config();
 
 const app = express();
 const port = process.env.PORT;
-app.use(cors());
+app.use(cors({
+    origin: function (origin, callback) {
+      // Permitir peticiones sin origin (como Postman) o desde los orígenes permitidos
+      if (!origin || [
+        'https://aletor26.github.io',
+        'http://localhost:5173'
+      ].includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    }
+  }));
 app.use(express.json());
 
 // Importar relaciones después de que todos los modelos estén definidos
 import './models/relaciones.js';
+
+
 
 // ------------------------------ ALUMNO 1 -----------------------------
 
@@ -213,12 +227,24 @@ app.post('/checkout/completarorden', async (req, res) => {
         }
 
         // 🔍 Validar existencia de productos
-        for (const item of items) {
-            const productoExiste = await Producto.findByPk(item.id);
-            if (!productoExiste) {
-                return res.status(400).json({ error: `El producto con ID ${item.id} no existe.` });
-            }
+      for (const item of items) {
+        const producto = await Producto.findByPk(item.id);
+        
+        if (!producto) {
+          return res.status(400).json({ error: `El producto con ID ${item.id} no existe.` });
         }
+
+        if (producto.stock < item.quantity) {
+          return res.status(400).json({ 
+            error: `No hay suficiente stock del producto "${producto.nombre}". Stock disponible: ${producto.stock}` 
+          });
+        }
+
+        // Reducir stock
+        producto.stock -= item.quantity;
+        await producto.save();
+      }
+
 
         const precioEnvio = metodoEnvio.precio;
         const precioTotal = subtotal + precioEnvio;
@@ -340,17 +366,34 @@ app.post('/login', async (req, res) => {
 app.post('/register', async (req, res) => {
   try {
     const { nombre, apellido, correo, clave, direccion, telefono, dni } = req.body;
-    // ✅ Verificar si el correo ya existe
+
+    // Verificar si ya existe un usuario con ese correo
     const existe = await Usuario.findOne({ where: { correo } });
     if (existe) {
       return res.status(400).json({ error: 'El correo ya está registrado' });
     }
 
-    const usuario = await Usuario.create({ nombre, apellido, correo, clave });
-    const cliente = await Cliente.create({ id: usuario.id, direccion, telefono, dni }); // ✅ ahora sí incluye dni
+    // Obtener el último ID usado
+    const ultimoId = await Usuario.max('id') || 0;
+    const nuevoId = ultimoId + 1;
 
+    // Crear usuario con ID manual
+    const usuario = await Usuario.create({ 
+      id: nuevoId, // 👈 ID manual
+      nombre, 
+      apellido, 
+      correo, 
+      clave,
+      estadoid: 1 // o el valor por defecto que uses
+    });
 
-    const rol = 'customer';
+    // Crear cliente con el mismo ID
+    const cliente = await Cliente.create({ 
+      id: nuevoId,
+      direccion, 
+      telefono, 
+      dni 
+    });
 
     res.status(201).json({
       mensaje: 'Registro exitoso',
@@ -360,7 +403,7 @@ app.post('/register', async (req, res) => {
         apellido: usuario.apellido,
         correo: usuario.correo,
         activo: usuario.estadoid === 1,
-        rol
+        rol: 'customer'
       }
     });
   } catch (err) {
@@ -368,6 +411,7 @@ app.post('/register', async (req, res) => {
     res.status(400).json({ error: 'Error al registrar usuario' });
   }
 });
+
 
 
 // RESUMEN DE ÓRDENES DEL USUARIO
@@ -432,21 +476,38 @@ app.put('/pedidos/:id/cancelar', async (req, res) => {
 
 // Agregar nueva categoría
 app.post('/categorias', async (req, res) => {
-  const { name, description, image } = req.body;
-  if (!name || typeof name !== 'string' || name.trim() === '') {
+  const { nombre, descripcion, imagen } = req.body;
+
+  if (!nombre || typeof nombre !== 'string' || nombre.trim() === '') {
     return res.status(400).json({ error: 'Nombre de categoría requerido' });
   }
+
   try {
-    const existe = await Categoria.findOne({ where: { name } });
+    const existe = await Categoria.findOne({ where: { nombre } });
     if (existe) {
       return res.status(409).json({ error: 'La categoría ya existe' });
     }
-    const nuevaCategoria = await Categoria.create({ name, description, image, active: true });
+
+    // 🚨 Opción 1: Forzar id manualmente
+    const maxId = await Categoria.max('id') || 0;
+
+    const nuevaCategoria = await Categoria.create({
+      id: maxId + 1, // ⚠️ Forzamos el siguiente id
+      nombre: nombre.trim(),
+      descripcion: descripcion?.trim() || '',
+      imagen: imagen?.trim() || ''
+    });
+
     res.status(201).json(nuevaCategoria);
   } catch (err) {
+    console.error('Error al crear categoría:', err);
     res.status(500).json({ error: 'Error al crear categoría' });
   }
 });
+
+
+
+
 
 // Listar todas las órdenes de un usuario por id
 app.get('/usuarios/:id/ordenes', async (req, res) => {
@@ -615,14 +676,16 @@ app.post('/admin/producto', async (req, res) => {
 
     // Paso 2: Crear el producto con ese ID si es necesario
     const producto = await Producto.create({
-      id: nuevoId, // 👈 lo seteamos manualmente
-      nombre: req.body.nombre,
-      descripcion: req.body.descripcion,
-      precio: req.body.precio,
-      url_imagen: req.body.url_imagen,
-      categoriaId: req.body.categoriaId,
-      estadoId: req.body.estadoId
+    id: nuevoId,
+    nombre: req.body.nombre,
+    descripcion: req.body.descripcion,
+    precio: req.body.precio,
+    url_imagen: req.body.url_imagen,
+    categoriaId: req.body.categoriaId,
+    estadoId: req.body.estadoId,
+    stock: req.body.stock ?? 0 // 👈 Esto es lo que te faltaba
     });
+
 
     res.status(201).json(producto);
   } catch (err) {
@@ -662,6 +725,20 @@ app.put("/admin/producto/:id", async (req, res) => {
         res.status(500).send("Error del servidor");
     }
 });
+
+app.get('/productos/por-categoria/:categoriaId', async (req, res) => {
+  try {
+    const categoriaId = parseInt(req.params.categoriaId, 10);
+    if (isNaN(categoriaId)) return res.status(400).json({ error: 'ID de categoría inválido' });
+
+    const productos = await Producto.findAll({ where: { categoriaId } });
+    res.json(productos);
+  } catch (err) {
+    console.error('Error al obtener productos por categoría:', err);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+});
+
 
 // ==================== DASHBOARD ENDPOINT ====================
 
